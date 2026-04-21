@@ -1,0 +1,3 @@
+# Constants
+SUCCESS = "SUCCESS"
+FAILURE = "FAILURE"

@@ -1,0 +1,103 @@
+from rest_framework import viewsets, status
+from rest_framework.views import APIView
+from django.http import JsonResponse
+import json
+import logging
+
+from {{app_name}}.models import {{tableName}}
+from {{app_name}}.serializers import {{tableName}}Serializer
+from {{app_name}}.utils import get_user_identifier, get_client_ip
+from {{app_name}}.constants import SUCCESS, FAILURE
+
+logger = logging.getLogger(__name__)
+audit_logger = logging.getLogger("audit")
+
+
+class MasterAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        agreements = {{tableName}}.objects.all()
+        serialized_data = {{tableName}}Serializer(agreements, many=True).data
+        return JsonResponse(
+
+            {
+                "masters":
+                    {
+                        "{{tableName}}": { "name" : "{{tableName}}", "url": "{{tableName}}", "model": "{{tableName}}", "primary_key":"agreement_no" },
+                        
+                    },
+                "initial_data": serialized_data
+
+            },
+            status=status.HTTP_200_OK
+        )
+
+class {{tableName}}ViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing {{tableName}} with comprehensive audit logging.
+    """
+
+    queryset = {{tableName}}.objects.all()
+    serializer_class = {{tableName}}Serializer
+
+    def create(self, request, *args, **kwargs):
+        """Override create to add audit logging"""
+
+        user_name = get_user_identifier(request.user)
+        client_ip = get_client_ip(request)
+
+        {{!-- primary_key_value = request.data.get(
+            "{{primary_key|default:'id'}}", "N/A"
+        ) --}}
+
+        audit_logger.info(json.dumps({
+            "log_type": "audit",
+            "event": "{{tableName}}_create_attempt",
+            "outcome": "IN_PROGRESS",
+            "src_user": user_name,
+            "interface_name": "{{tableName}} API",
+            "interface_type": "{{tableName}} Creation",
+            "view_type": "read_write",
+            "client_ip": client_ip,
+            "input": request.data
+        }))
+
+        try:
+            response = super().create(request, *args, **kwargs)
+
+            audit_logger.info(json.dumps({
+                "log_type": "audit",
+                "event": "{{tableName}}_create",
+                "outcome": SUCCESS,
+                "src_user": user_name,
+                "interface_name": "{{tableName}} API",
+                "interface_type": "{{tableName}} Creation",
+                "view_type": "read_write",
+                "client_ip": client_ip,
+                "input": request.data
+            }))
+
+            return response
+
+        except Exception as e:
+            audit_logger.error(json.dumps({
+                "log_type": "audit",
+                "event": "{{tableName}}_create",
+                "outcome": FAILURE,
+                "src_user": user_name,
+                "interface_name": "{{tableName}} API",
+                "interface_type": "{{tableName}} Creation",
+                "view_type": "read_write",
+                "client_ip": client_ip,
+                "error": str(e),
+                "input": request.data
+            }))
+            raise
+
+    def perform_create(self, serializer):
+        """
+        Hook method called by create() after serializer validation passes.
+        Used to set created_user from the authenticated user before saving.
+        """
+        user_name = get_user_identifier(self.request.user)
+        logger.info(f"Setting created_user to: {user_name}")
+        serializer.save(created_user=user_name)

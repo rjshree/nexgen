@@ -1,0 +1,16 @@
+from django.db import models
+
+{{#each models}}
+class {{this.name}}(models.Model):
+{{#each this.fields}}
+    {{this.name}} = models.{{this.type}}({{this.options}})
+{{/each}}
+
+    class Meta:
+        db_table = '{{this.tableName}}'
+        verbose_name_plural = '{{this.name}}s'
+
+    def __str__(self):
+        return str(self.pk)
+
+{{/each}}

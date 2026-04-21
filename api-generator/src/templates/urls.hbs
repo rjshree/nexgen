@@ -1,0 +1,27 @@
+from rest_framework import routers
+from django.urls import path, include
+from . import views
+
+router = routers.SimpleRouter()
+
+{{!-- Dynamic ViewSet --}}
+router.register(
+    "{{tableName}}",
+    views.{{tableName}}ViewSet,
+    basename="{{tableNameSnake}}_api"
+)
+
+
+
+urlpatterns = [
+    path("/", include(router.urls)),
+
+    
+
+    {{!-- MasterAPIView is standard and reused --}}
+    path(
+        "masters",
+        views.MasterAPIView.as_view(),
+        name="masters"
+    ),
+]

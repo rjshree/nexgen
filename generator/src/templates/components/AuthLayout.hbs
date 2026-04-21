@@ -1,0 +1,110 @@
+"use client";
+import React, {useEffect, useRef} from "react";
+import {
+  useMsal,
+  useIsAuthenticated,
+} from "@azure/msal-react";
+import { InteractionStatus } from "@azure/msal-browser";
+
+import { loginRequest } from "../../config/authConfig";
+const fqcAdminGroupId = "311beb16-b026-4842-be9c-912bab7a57b6";
+const cosmosAdminGroupId = "2268bb2f-1d52-46a6-8fe8-c783df03d716";
+const cosmosAdminGroup = "EK_AAD_ROA_UAE_COSMOS_ADMIN";
+const pdOutstationGroupId = "035e0a15-9497-4e4c-8c16-b192b26a31bb";
+export const SSO = () => {
+  console.log("SSO component called");
+  const { instance } = useMsal();
+  
+
+  if (typeof window !== "undefined") {
+    login(instance);
+  }
+};
+
+ const AuthLayout = (props) => {
+  const isAuthenticated = useIsAuthenticated();
+  const { instance, inProgress, accounts } = useMsal();
+  //Persists across renders without causing re-renders.
+  // Ensures silentLogin is called only once, even if useEffect runs multiple times.
+  const attempted = useRef(false);
+  //Runs after render, not during. Prevents blocking the render cycle.
+  // This guarantees silentLogin() runs exactly once, avoiding interaction_in_progress.
+  useEffect(() => {
+    // 	inProgress === InteractionStatus.None Ensures no MSAL interaction is already running before starting a new one.
+    if (!isAuthenticated && !attempted.current && inProgress === InteractionStatus.None) {
+      attempted.current = true;
+      silentLogin(instance, accounts);
+    }
+  }, [isAuthenticated, instance, inProgress, accounts]);
+
+  return <>{props.children}</>;
+  
+};
+
+async function login(instance) {
+  console.log("handleLogin called", instance);
+  try {
+    console.log("handleLogin try ");
+    await instance.initialize();
+    const tokenResponse = await instance.loginRedirect(loginRequest);
+    console.log("accessToken", tokenResponse.access_token);
+    console.log(" inside login", instance.getActiveAccount()?.homeAccountId);
+    return instance.getActiveAccount()?.homeAccountId;
+  
+  } catch (error) {
+    console.error("Error acquiring token silently:", error);
+    return null;
+  }
+}
+
+async function silentLogin(instance) {
+  try {
+    console.log("Attempting silent login");
+
+    // No accounts → redirect immediately
+    if (!accounts || accounts.length === 0) {
+      console.log("No accounts, redirecting");
+      await instance.loginRedirect(loginRequest);
+      return;
+    }
+
+    // Try ssoSilent with account hint
+    await instance.ssoSilent({
+      ...loginRequest,
+      account: accounts[0],
+    });
+  } catch (error) {
+    console.warn("Silent auth failed, redirecting:", error.message);
+    await instance.loginRedirect(loginRequest);
+  }
+}
+
+export const isAdmin = (accounts) => {
+  console.log(
+    "Role has admin",
+    accounts?.idTokenClaims?.groups?.includes(fqcAdminGroupId)
+  );
+  return accounts?.idTokenClaims?.groups?.includes(fqcAdminGroupId);
+};
+
+export const isCosmosAdmin = (accounts) => {
+  console.log(
+    "Role has admin",
+    accounts?.idTokenClaims?.groups?.includes(cosmosAdminGroupId)
+  );
+  return accounts?.idTokenClaims?.groups?.includes(cosmosAdminGroupId) || accounts?.idTokenClaims?.groups?.includes(cosmosAdminGroup);
+};
+
+export const isFqcAdmin = (accounts) => {
+  console.log("Role has admin", accounts?.idTokenClaims?.groups?.includes(fqcAdminGroupId));
+  return accounts?.idTokenClaims?.groups?.includes(fqcAdminGroupId);
+};
+
+export const isPDOutstation = (accounts) => {
+  console.log(
+    "Role has admin",
+    accounts?.idTokenClaims?.groups?.includes(pdOutstationGroupId)
+  );
+  return accounts?.idTokenClaims?.groups?.includes(pdOutstationGroupId);
+};
+ export default AuthLayout;

@@ -1,0 +1,430 @@
+import React from 'react';
+import {
+prefetchMasterData,
+fetchMasterTableData,
+addMasterRecord,
+updateMasterRecord,
+deleteMasterRecord,
+} from '../../api/masterAPI';
+
+import SelectOptionComponent from './{{projectName}}Master/SelectOptionComponent';
+
+import {
+Button,
+Typography,
+Grid,
+} from '@mui/material';
+
+import {
+DataGrid,
+GridToolbarContainer,
+GridRowEditStopReasons,
+GridRowModes,
+GridActionsCellItem,
+GridToolbarColumnsButton
+} from '@mui/x-data-grid';
+import DataArrayIcon from '@mui/icons-material/DataArray';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/DeleteOutlined';
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Close';
+import DownloadIcon from '@mui/icons-material/Download';
+
+import Box from '@mui/material/Box';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+
+import { TABLE_COLUMN_CONFIG } from './{{projectName}}Master/masterTables';
+
+class MasterTables extends React.Component {
+constructor(props) {
+super(props);
+this.activeAccount = props.activeAccount;
+this.msalInstance = props.msalInstance;
+this.isAdmin = props.isAdmin ?? true;
+
+this.state = {
+loading: false,
+masterTableList: [],
+selectedTable: '',
+tableData: [],
+columns: [],
+rowModesModel: {},
+snackbar: null,
+columnVisibilityModel: {},
+};
+}
+
+componentDidMount() {
+this.fetchMasterTableNames();
+}
+
+validateRow = (row) => {
+const { selectedTable } = this.state;
+const config = TABLE_COLUMN_CONFIG[selectedTable];
+if (!config) return [];
+
+const errors = [];
+config.forEach((col) => {
+const rules = col.validation;
+if (!rules) return;
+
+const value = row[col.field];
+
+if (rules.required && !value) {
+errors.push(`${col.headerName} is required`);
+}
+
+if (rules.maxLength && value?.length > rules.maxLength) {
+errors.push(`${col.headerName} exceeds max length`);
+}
+
+if (rules.pattern && !rules.pattern.test(value)) {
+errors.push(`${col.headerName} format is invalid`);
+}
+});
+return errors;
+};
+
+fetchMasterTableNames = async () => {
+try {
+this.setLoading(true);
+const response = await prefetchMasterData();
+const initialData = response.initial_data || [];
+const masterTableList = Object.entries(response.masters).map(
+([key, value]) => ({
+code: key,
+name: value.name,
+url: value.url,
+pk: value.primary_key,
+})
+);
+const selectedTable = masterTableList.length > 0 ? masterTableList[0].code : '';
+this.setState({
+        masterTableList,selectedTable, tableData: initialData.map((row, index) => ({ id: row.id || index,  ...row })),
+        loading: false,});
+console.log('Selected table after fetching master tables:', selectedTable);
+      // Use initialData if it was prefetched, otherwise fetch via URL
+      if (initialData.length > 0) {
+        const tableData = initialData.map((row, index) => ({ id: row.id || index, ...row }));
+        this.setState(
+          { masterTableList, selectedTable },
+          () => {
+            const columns = this.buildColumns(tableData);
+            this.setState({ tableData, columns });
+          }
+        );
+      }  else if (selectedTable) {
+        const selectedMaster = masterTableList.find((t) => t.code === selectedTable);
+        if (selectedMaster) {
+          this.fetchTableData(selectedMaster.url);
+        }
+      }
+} finally {
+this.setLoading(false);
+}
+};
+
+fetchTableData = async (url) => {
+try {
+this.setLoading(true);
+const data = await fetchMasterTableData(url);
+const rows = (data?.results || data || []).map((row, index) => ({
+id: row.id ?? index,
+...row,
+}));
+this.setState({
+tableData: rows,
+columns: TABLE_COLUMN_CONFIG[this.state.selectedTable] || [],
+});
+} finally {
+this.setLoading(false);
+}
+};
+
+buildColumns = (data) => {
+    if (!data || data.length === 0) return [];
+    console.log('selected table', this.state.selectedTable);
+    const config = this.state.selectedTable!= "" ? TABLE_COLUMN_CONFIG[this.state.selectedTable] : [];
+    console.log('Building columns with config:', config);
+    
+    const keys = Object.keys(data[0]).filter((key) => key !== 'isNew');
+    const visibilityModel = {};
+    let builtColumns;
+    if (config) {
+      // Config-driven columns: only show non-hidden, respect ordering and display names
+       builtColumns =  config
+        .map((col) => ({
+          field: col.field,
+          headerName: col.headerName || col.field.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+          flex: col.width ? undefined : (col.flex ?? 1),
+          minWidth: col.minWidth ?? 120,
+          ...(col.width ? { width: col.width } : {}),
+          editable: col.editable !== undefined ? col.editable : col.field !== 'id',
+          renderHeader: () => (
+            <strong>
+              {col.headerName || col.field.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+              {col.validation?.required ? ' *' : ''}
+            </strong>
+          ),
+        }));
+        // Set hidden columns to false in visibility model
+      config.forEach((col) => {
+        visibilityModel[col.field] = !col.hidden;
+      });
+      this.setState({ columnVisibilityModel: visibilityModel });
+      return builtColumns;
+    }
+
+    return keys.map((key) => ({
+      field: key,
+      headerName: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      flex: 1,
+      minWidth: 120,
+      editable: key !== 'id',
+      renderHeader: () => (
+        <strong>{key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</strong>
+      ),
+    }));
+
+  };
+
+handleTableChange = (event) => {
+const selectedTable = event.target.value;
+const selectedMaster = this.state.masterTableList.find(
+(t) => t.code === selectedTable
+);
+
+this.setState(
+{ selectedTable, tableData: [], columns: [], rowModesModel: {} },
+() => {
+if (selectedMaster) {
+this.fetchTableData(selectedMaster.url);
+}
+}
+);
+};
+
+handleAddRecord = () => {
+const { tableData, columns } = this.state;
+const maxId = Math.max(0, ...tableData.map((r) => r.id));
+const newRecord = { id: maxId + 1, isNew: true };
+
+columns.forEach((col) => {
+if (col.field !== 'id') newRecord[col.field] = '';
+});
+
+this.setState({
+tableData: [newRecord, ...tableData],
+rowModesModel: {
+...this.state.rowModesModel,
+[newRecord.id]: { mode: GridRowModes.Edit },
+},
+});
+};
+
+// --- Utility ---
+setLoading = (isLoading) => {
+this.setState({ loading: isLoading });
+};
+
+setSnackbar = (snackbar) => {
+this.setState({ snackbar });
+};
+
+handleCloseSnackbar = () => {
+this.setState({ snackbar: null });
+};
+// --- Utility ---
+
+// --- CRUD Handlers ---
+handleAddRecord = () => {
+const { tableData, columns } = this.state;
+const maxId = Math.max(...tableData.map((row) => row.id || 0), 0);
+const newRecord = { id: maxId + 1, isNew: true };
+columns.forEach((col) => {
+if (col.field !== 'id' && !(col.field in newRecord)) {
+newRecord[col.field] = '';
+}
+});
+this.setState((prevState) => ({
+tableData: [newRecord, ...prevState.tableData],
+rowModesModel: {
+...prevState.rowModesModel,
+[newRecord.id]: { mode: GridRowModes.Edit },
+},
+}));
+};
+handleEditClick = (id) => {
+this.setState((prevState) => ({
+rowModesModel: {
+...prevState.rowModesModel,
+[id]: { mode: GridRowModes.Edit },
+},
+}));
+};
+
+handleSaveClick = (id) => {
+this.setState((prevState) => ({
+rowModesModel: {
+...prevState.rowModesModel,
+[id]: { mode: GridRowModes.View },
+},
+}));
+};
+
+handleCancelClick = (id) => {
+this.setState((prevState) => ({
+rowModesModel: {
+...prevState.rowModesModel,
+[id]: { mode: GridRowModes.View, ignoreModifications: true },
+},
+}));
+const editedRow = this.state.tableData.find((row) => row.id === id);
+if (editedRow && editedRow.isNew) {
+this.setState((prevState) => ({
+tableData: prevState.tableData.filter((row) => row.id !== id),
+}));
+}
+};
+
+handleDelete = async (id) => {
+const { selectedTable } = this.state;
+try {
+this.setLoading(true);
+const success = await deleteMasterRecord(selectedTable, id);
+if (success) {
+this.setState((prevState) => ({
+tableData: prevState.tableData.filter((row) => row.id !== id),
+}));
+this.setSnackbar({ message: 'Record successfully deleted', severity: 'success' });
+} else {
+this.setSnackbar({ message: 'Error deleting record', severity: 'error' });
+}
+} catch (error) {
+console.error('Error deleting record:', error);
+this.setSnackbar({ message: `Error deleting record: ${error.message}`, severity: 'error' });
+} finally {
+this.setLoading(false);
+}
+};
+// --- CRUD Handlers ---
+getActions = ({ id }) => {
+const isInEditMode = this.state.rowModesModel[id]?.mode === GridRowModes.Edit;
+
+if (isInEditMode) {
+return [
+<GridActionsCellItem key="save" icon={<SaveIcon />}
+label="Save"
+sx=\{{ color: 'primary.main' }}
+onClick={() => this.handleSaveClick(id)}
+/>,
+<GridActionsCellItem key="cancel" icon={<CancelIcon />}
+label="Cancel"
+className="textPrimary"
+onClick={() => this.handleCancelClick(id)}
+color="inherit"
+/>,
+];
+}
+
+return [
+<GridActionsCellItem key="edit" icon={<EditIcon />}
+label="Edit"
+className="textPrimary"
+onClick={() => this.handleEditClick(id)}
+color="inherit"
+disabled={!this.isAdmin}
+/>,
+<GridActionsCellItem key="delete" icon={<DeleteIcon />}
+label="Delete"
+onClick={() => this.handleDelete(id)}
+color="inherit"
+disabled={!this.isAdmin}
+/>,
+];
+};
+render() {
+const {
+loading, snackbar, tableData, columns, selectedTable, masterTableList, rowModesModel, columnVisibilityModel
+} = this.state;
+const actionsColumn = {
+field: 'actions',
+type: 'actions',
+headerName: 'Actions',
+width: 150,
+renderHeader: () => <strong>Actions</strong>,
+getActions: (params) => this.getActions(params),
+};
+
+const EditToolbar = () => (
+<GridToolbarContainer>
+  <Button color="primary" startIcon={<AddIcon />}
+  onClick={this.handleAddRecord}
+  // disabled={!this.isAdmin}
+  >
+  Add record
+  </Button>
+  <GridToolbarColumnsButton />
+  <Button size="small" color="primary" startIcon={<DownloadIcon />}
+  onClick={() => handleDownloadCSV("standard", requestFrom, isFilterEnabled, selectedValues) }
+  >
+  Export CSV
+  </Button>
+
+</GridToolbarContainer>
+);
+const allColumns = columns.length > 0 ? [...columns, actionsColumn] : [];
+
+const rowsWithIds = (tableData || []).map((row) => ({ ...row }));
+
+const MyCustomNoRowsOverlay = () => (
+<div style=\{{ display: 'flex' , justifyContent: 'center' , alignItems: 'center' , height: '100%' }}>
+  <DataArrayIcon align="center" />
+  <p align="center">No items found</p>
+</div>
+);
+return (
+<Box sx=\{{ marginTop: '66px' , height: '100%' , marginLeft: '70px' , marginRight: '10px' }}>
+  <Grid container spacing={1} sx=\{{ marginTop: '60px' , marginRight: '10px' , marginLeft: '2px' , marginBottom: '7px' ,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.1)' , maxWidth: '100%' , paddingBottom: '30px' , justifyContent: 'flex-end' , }}>
+    <Typography sx=\{{ width: '100%' , paddingLeft: '5px' , fontSize: 20, fontWeight: 500, fontFamily: 'inherit' ,
+      textAlign: 'left' , justifyContent: 'center' , alignItems: 'center' , color: 'white' , margin: '2px 0' ,
+      height: '30px' , backgroundColor: '#01579b' , }}>
+      {{projectTitle}}
+    </Typography>
+
+    <SelectOptionComponent selectedValue={selectedTable} optionList={masterTableList}
+      onChange={this.handleTableChange} />
+
+
+
+    <DataGrid rows={rowsWithIds} columns={allColumns} editMode="row"
+      onRowModesModelChange={this.handleRowModesModelChange} onRowEditStop={this.handleRowEditStop}
+      processRowUpdate={this.processRowUpdate} onProcessRowUpdateError={this.handleProcessRowUpdateError}
+      rowModesModel={rowModesModel} loading={loading} autoHeight rowHeight={33} // Column visibility
+      columnVisibilityModel={columnVisibilityModel} onColumnVisibilityModelChange={(newModel)=> this.setState({
+      columnVisibilityModel: newModel })}
+
+      slots=\{{
+      toolbar: EditToolbar,
+      noRowsOverlay: MyCustomNoRowsOverlay,
+      }}
+      getRowId={(row) => row.id}
+      />
+
+      {snackbar && (
+      <Snackbar open>
+        <Alert severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+      )}
+  </Grid>
+</Box>
+);
+}
+}
+
+export default MasterTables;

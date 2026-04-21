@@ -1,0 +1,18 @@
+export const TABLE_COLUMN_CONFIG = `{
+    {{#each tables}}
+      {{name}}: [
+      {{#each columns}}
+        {
+          field: '{{field}}',
+          headerName: '{{headerName}}',
+          {{#if width}}width: {{width}},{{/if}}
+          {{#if editable}}editable: true,{{/if}}
+          {{#if validation}}
+          validation: {{validation}},
+          {{/if}}
+        },
+      {{/each}}
+      ],
+    {{/each}}
+    };
+    `

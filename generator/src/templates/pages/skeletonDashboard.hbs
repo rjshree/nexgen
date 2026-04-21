@@ -1,0 +1,37 @@
+import React from 'react';
+import Head from 'next/head';
+import  AuthLayout from '../components/wrapper/ContentWrapper';
+import Sidebar from '../components/sidebar';
+import { useMsal, AuthenticatedTemplate } from "@azure/msal-react";
+import DashboardComponent from '@/components/dashboard/DashboardComponent';
+
+const ODS = () => {
+  const { instance, accounts } = useMsal();
+  let activeAccount;
+
+  if (instance) {
+    console.log("fqcreport page instance exists");
+    activeAccount = accounts[0];
+  }
+  return (
+    <>
+      <AuthLayout>
+        <AuthenticatedTemplate>
+          <Head>
+            <title>RO APPS - {{PROJECT_TITLE}}</title>
+          </Head>
+          <Sidebar
+            user_name={activeAccount?.name}
+            tab_name={"RO APPS PORTAL - {{PROJECT_TITLE}}"}
+            userGroups={activeAccount?.idTokenClaims?.groups || []} // Pass user groups to Sidebar for filtering
+            displayComponent={
+              <DashboardComponent />
+            }
+          ></Sidebar>
+        </AuthenticatedTemplate>
+      </AuthLayout>
+    </>
+  );
+}
+
+export default ODS;

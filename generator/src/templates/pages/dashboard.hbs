@@ -1,0 +1,31 @@
+import React from 'react';
+import Head from 'next/head';
+import { useMsal, AuthenticatedTemplate } from "@azure/msal-react";
+import Sidebar from '{{SIDEBAR_PATH}}';
+import AuthLayout from '{{AUTH_LAYOUT_PATH}}';
+import MasterTables from '{{MASTER_TABLES_PATH}}';
+
+const Dashboard = () => {
+  const { instance, accounts } = useMsal();
+  const activeAccount = accounts?.[0];
+
+  return (
+    <>
+      <Head>
+        <title>{{PROJECT_TITLE}}</title>
+      </Head>
+
+      <AuthenticatedTemplate>
+        <AuthLayout>
+          <Sidebar />
+          <MasterTables
+            activeAccount={activeAccount}
+            msalInstance={instance}
+          />
+        </AuthLayout>
+      </AuthenticatedTemplate>
+    </>
+  );
+};
+
+export default Dashboard;

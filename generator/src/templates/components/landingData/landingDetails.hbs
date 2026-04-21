@@ -1,0 +1,46 @@
+import * as React from 'react';
+import Grid from '@mui/material/Grid';
+import CustomCard from './CustomCard';
+import StarIcon from '@mui/icons-material/Star';
+import Container from '@mui/material/Container';
+import Box from '@mui/material/Box';
+
+
+const cardHeader1 = 'Topic';
+const contactLinks1 = [
+  {
+    text: "{{projectName}}",
+    icon: <StarIcon />,
+    path: "/dashboard",
+    isActive: true,
+    groups: [],
+  },
+ 
+];
+
+
+const LandingDetails = ({groupIds}) => {
+  console.log("GroupIds in LandingDetails", groupIds);
+ 
+ 
+    return (
+      <Container maxWidth="lg" style=\{{ flex: 1, paddingTop: "20px" }}>
+        <Box sx=\{{ flexGrow: 1, mt: 6, ml: 13, marginBottom: "70px" }}>
+        <Grid container spacing=\{{ xs: 2, sm: 3, md: 4 }} sx=\{{justifyContent:"center", alignItems:"center"}}>
+            {contactLinks1.length > 0 && (
+            <Grid item xs={12} sm={8} md={5}>
+              <CustomCard
+                header={cardHeader1}
+                links={contactLinks1}
+                style=\{{ marginBottom: "20px" }}
+              />
+            </Grid>
+            )}
+            
+          </Grid>
+        </Box>
+      </Container>
+    );
+}
+
+export default LandingDetails;

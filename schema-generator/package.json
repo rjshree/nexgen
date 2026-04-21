@@ -1,0 +1,19 @@
+{
+    "name": "schema-generator",
+    "version": "1.0.0",
+
+    "description": "A service to generate database schemas based on provided models and relationships.",
+    "scripts": {
+        "build": "tsc",
+        "start": "npm run build && node dist/index.js",
+        "dev": "npx ts-node src/index.ts",
+        "cli": "npm run build && node dist/cli.js"
+    },
+    "dependencies": {
+        "mariadb": "^3.5.2",
+        "oracledb": "^6.10.0",
+        "@types/node": "^25.5.2",
+        "typescript": "^6.0.2",
+        "ts-node": "^10.9.1"
+    }
+}

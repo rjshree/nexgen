@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    
+    "build:exe": "npx pkg src/generatorServer.js --targets node18-win-x64 --output dist/generator-server.exe"
+  },
+  "pkg": {
+    "assets": ["src/**/*"],
+    "targets": ["node18-win-x64"]
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}

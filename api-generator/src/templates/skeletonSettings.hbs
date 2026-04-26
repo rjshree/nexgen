@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -89,7 +89,33 @@ DATABASES = {
     },
 }
 
+CORS_ALLOW_METHODS = [
 
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+    'DELETE',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'content-disposition',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+#  Keep this for download files from frontend as content-disposition header is required to be exposed
+CORS_EXPOSE_HEADERS = [
+    'content-disposition',
+    # Add other headers you want to expose
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -128,3 +154,22 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 ALLOWED_GROUPS =  ['EK_AAD_ROA_UAE_COSMOS_USR', 'EK_AAD_ROA_UAE_COSMOS_ADMIN']
+
+#  Remove the CLIENT SECRET before commit
+# Keep AZURE_CLIENT_SECRET = os.getenv('AZURE_CLIENT_SECRET')
+
+AZURE_CLIENT_ID = os.getenv('AZURE_CLIENT_ID', 'd01a7e75-6881-4a93-83dc-faf7c02c45e8')
+AZURE_CLIENT_SECRET = os.getenv('AZURE_CLIENT_SECRET', 'ENTER YOUR SECRET HERE')
+AZURE_TENANT_ID = os.getenv('AZURE_TENANT_ID', 'e0b26355-1889-40d8-8ef1-e559616befda')
+OPENID_METADATA_URL = os.getenv('OPENID_METADATA_URL',
+                                f'https://login.microsoftonline.com/{AZURE_TENANT_ID}/v2.0/.well-known/openid-configuration?appid={AZURE_CLIENT_ID}')
+API_AUDIENCE = os.getenv('AUDIENCE', 'd01a7e75-6881-4a93-83dc-faf7c02c45e8')
+ALGORITHM = os.getenv('ALGORITHM', 'RS256')
+OBO_GRANT_TYPE = os.getenv('OBO_GRANT_TYPE', 'urn:ietf:params:oauth:grant-type:jwt-bearer')
+OAUTH2_TOKEN_URL = os.getenv('OAUTH2_TOKEN_URL', f'https://login.microsoftonline.com/{AZURE_TENANT_ID}/oauth2/token')
+
+CLAIM_NAME = os.getenv('CLAIM_NAME', 'name')
+CLAIM_EMAIL = os.getenv('CLAIM_EMAIL', 'preferred_username')
+CLAIM_GROUPS = os.getenv('CLAIM_GROUPS', 'groups')
+CLAIM_IPADDR = os.getenv('CLAIM_IPADDR', 'ipaddr')
+CLAIM_STAFF_ID = os.getenv('CLAIM_STAFF_ID', 'staff_id')

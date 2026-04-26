@@ -11,17 +11,7 @@ router.register(
     basename="{{tableNameSnake}}_api"
 )
 
-
-
 urlpatterns = [
     path("/", include(router.urls)),
-
-    
-
-    {{!-- MasterAPIView is standard and reused --}}
-    path(
-        "masters",
-        views.MasterAPIView.as_view(),
-        name="masters"
-    ),
+    path("masters/", views.MasterAPIView.as_view(), name="masters"),
 ]

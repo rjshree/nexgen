@@ -36,6 +36,7 @@ import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 
 import { TABLE_COLUMN_CONFIG } from './{{projectName}}Master/masterTables';
+import { API_SCOPE_READ } from '../../config/authConfig';
 
 class MasterTables extends React.Component {
 constructor(props) {
@@ -57,7 +58,15 @@ columnVisibilityModel: {},
 }
 
 componentDidMount() {
-this.fetchMasterTableNames();
+
+this.msalInstance.acquireTokenSilent({
+  account: this.activeAccount,
+  scopes: [API_SCOPE_READ],
+}).then(tokenResponse => {
+  this.accessToken = tokenResponse.accessToken
+  this.setState({...this.state, accessToken:tokenResponse.accessToken });
+  this.fetchMasterTableNames();
+});
 }
 
 validateRow = (row) => {
@@ -90,7 +99,7 @@ return errors;
 fetchMasterTableNames = async () => {
 try {
 this.setLoading(true);
-const response = await prefetchMasterData();
+const response = await prefetchMasterData(this.accessToken);
 const initialData = response.initial_data || [];
 const masterTableList = Object.entries(response.masters).map(
 ([key, value]) => ({

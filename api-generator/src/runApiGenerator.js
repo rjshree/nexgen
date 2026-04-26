@@ -1,6 +1,6 @@
 const path = require("path");
 const { bootstrapDjangoProject } = require("./bootstrap");
-const { generateModels } = require("./generators/generateModels");
+const { generateModels, generateSkeletonModels } = require("./generators/generateModels");
 const { generateViews } = require("./generators/generateViews");
 const { generateUrls } = require("./generators/generateUrls");
 const { generateSerializers } = require("./generators/generateSerializers");
@@ -39,7 +39,7 @@ function resolveWorkspace(baseDir) {
  * @returns {Promise<DjangoGeneratorResult>}
  */
 async function runApiGenerator(input) {
-  const { projectName, baseDir, djangoModel, db, type } = input;
+  const { projectName, baseDir, setupVenv, djangoModel, db, type } = input;
 
   if (!projectName) {
     throw new Error("projectName is required");
@@ -59,8 +59,8 @@ async function runApiGenerator(input) {
 
   console.log(`🚀 Generating Django project: ${projectName}`);
   console.log(`📁 Output folder: ${apiRoot}`);
-  // console.log("Django Model details:", djangoModel);
-  console.log("Db details:", db);
+  console.log(`🔧 Generation type: ${type}`);
+  console.log(`🐍 Setup virtual environment: ${setupVenv === false ? "No" : "Yes"}`);
 
   const generatedFiles = [];
   const generatedFolders = [];
@@ -68,7 +68,7 @@ async function runApiGenerator(input) {
   // 1. Bootstrap Django project and apps
   console.log("📦 Bootstrapping Django project...");
   const djangoProjectName = toDjangoProjectName(projectName);
-  const bootstrapResult = bootstrapDjangoProject(apiRoot, projectName, djangoProjectName);
+  const bootstrapResult = bootstrapDjangoProject(apiRoot, projectName, djangoProjectName, setupVenv);
   generatedFolders.push(...bootstrapResult.folders);
   console.log("✅ Bootstrap complete");
   const tableName = db && db.table ? toPascalCase(db.table) : "YourTableName";
@@ -76,44 +76,49 @@ async function runApiGenerator(input) {
   const app = "core";
 
  if (type === "crud") {
+
   if (djangoModel && djangoModel.length > 0) {
-    console.log(`🔧 Generating models for app: ${app}`);
+    console.log(`🔧 Generating models for app: ${app}, type:  ${type}`);
     const modelFile = generateModels(apiRoot, projectName, app, djangoModel);
     generatedFiles.push(modelFile);
   }
-  
-
-  // // 3. Generate serializers
+  //  Generate serializers
   console.log(`🔧 Generating serializers for app: ${app}`);
   const serializerFile = generateSerializers(apiRoot, projectName, app, tableName);
   generatedFiles.push(serializerFile);
-
-  // 4. Generate views
-  console.log(`🔧 Generating views for app: ${app}`);
-  const viewFile = generateViews(apiRoot, projectName, app, tableName);
-  generatedFiles.push(viewFile);
+  
+ }
+ if (type === "api-skeleton") {
+    console.log(`🔧 Generating skeleton models for app: ${app}`);
+    const modelSkeletonFile = generateSkeletonModels(apiRoot, projectName, app);
+    generatedFiles.push(modelSkeletonFile);
+ }
+ 
+ // 4. Generate views
+ console.log(`🔧 Generating views for app: ${app}, type:  ${type}`);
+ const viewFile = generateViews(apiRoot, projectName, app, tableName, type);
+ generatedFiles.push(viewFile);
 
   // 5. Generate URLs
-  console.log(`🔧 Generating urls for app: ${app}`);
-  const urlFile = generateUrls(apiRoot, djangoProjectName, app, tableName);
+  console.log(`🔧 Generating urls for app: ${app}, type:  ${type}`);
+  const urlFile = generateUrls(apiRoot, djangoProjectName, app, tableName, type);
   generatedFiles.push(urlFile);
- }
   // 6. Settings with CORS and installed apps
-  console.log("⚙️ Updating project settings...");
+  console.log("⚙️ Generating project settings... type:  ${type}");
   const settingsFile = generateSettings(apiRoot, djangoProjectName, app, db, type);
   generatedFiles.push(settingsFile);
   
-  console.log(`🔧 Copying backends.py to app: ${app}`)
+  console.log(`🔧 Copying backends.py to app: ${app}, type:  ${type}`)
   const backendFile = generateBackend(apiRoot, projectName, app, djangoModel);
   generatedFiles.push(backendFile);
 
-  console.log(`🔧 Copying constants.py to app: ${app}`)
+  console.log(`🔧 Copying constants.py to app: ${app}, type:  ${type}`)
   const constantsSrc = path.join(__dirname, "templates", "constants.py");
   const constantsDest = path.join(apiRoot, app, "constants.py");
   fs.copyFileSync(constantsSrc, constantsDest);
   generatedFiles.push(constantsDest);
 
-  console.log(`🔧 Copying utils.py to app: ${app}`)
+  console.log(`🔧 Copying utils.py to app: ${app}, type:  ${type}`)
   const utilsSrc = path.join(__dirname, "templates", "utils.py");
   const utilsDest = path.join(apiRoot, app, "utils.py");
   fs.copyFileSync(utilsSrc, utilsDest);

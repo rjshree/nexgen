@@ -13,6 +13,7 @@ export type GeneratorInput = {
   muiColumns?: any;
   type?: any;
   azureClientId?: string;
+  installNodeModules: boolean;
 };
 
 export type GeneratorResult = {
@@ -44,8 +45,8 @@ function resolveWorkspace(baseDir?: string): string {
 export async function runGenerator(
   input: GeneratorInput
 ): Promise<GeneratorResult> {
-  const { projectName, baseDir,muiColumns, type, azureClientId } = input;
-  console.log("Running generator with input:", input);
+  const { projectName, baseDir,muiColumns, type, azureClientId, installNodeModules } = input;
+  console.log("Running generator with input:", input, installNodeModules);
   if (!projectName) {
     throw new Error("projectName is required");
   }
@@ -64,7 +65,7 @@ export async function runGenerator(
 
   // 1. Bootstrap Next.js project (generates package.json, installs deps, etc.)
   try {
-    await bootstrapNextJsProject(`${projectName}-ui`, projectDir);
+    await bootstrapNextJsProject(`${projectName}-ui`, projectDir, installNodeModules);
     console.log("✅ Bootstrap complete");
   } catch (error) {
     console.error("❌ Bootstrap failed:", error);
@@ -75,8 +76,9 @@ export async function runGenerator(
   const capitalizedProjectName = projectName.toUpperCase();
   if(type === "crud") {
   generateUiStructure(uiRoot, projectName, projectName, `${capitalizedStartingLetterProjectName} MASTER DATA`, "154d252a-9bcd-489c-b061-500ead6fd122", muiColumns);
-  }
+  } else {
   generateDashboardOnly(uiRoot, projectName, capitalizedProjectName, azureClientId);
+  }
 
 
   return {

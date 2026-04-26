@@ -9,7 +9,7 @@ async function prefetchMasterData(token){
     const response =  await fetch(`${NEXT_PUBLIC_BASE_API_URL}/masters`, {
       method: 'GET',
       headers: {
-        // Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": 'application/json',
       },
     });

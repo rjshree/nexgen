@@ -1,7 +1,7 @@
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
-export function bootstrapNextJsProject(projectName: string, cwd: string) {
+export function bootstrapNextJsProject(projectName: string, cwd: string, installNodeModules: boolean = true) {
   console.log("🚀 Bootstrapping Next.js project...", projectName);
   console.log(`📂 Working directory: ${cwd}`);
   
@@ -95,8 +95,12 @@ export function bootstrapNextJsProject(projectName: string, cwd: string) {
   fs.writeFileSync(packageJsonPath, JSON.stringify(customPackageJson, null, 2));
 
   // 4. Install specific versions
-  console.log("📥 Installing dependencies...");
-  execSync(`cd ${projectPath} && npm install`, { stdio: "inherit" });
+  if (installNodeModules !== false) {
+    console.log("📥 Installing dependencies...");
+    execSync(`cd ${projectPath} && npm install`, { stdio: "inherit" });
+  } else {
+    console.log("⏭️ Skipping npm install (user opted out)");
+  }
 
   console.log(`✅ Next.js project created with custom dependencies: ${projectPath}`);
 }

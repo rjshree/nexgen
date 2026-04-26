@@ -3,6 +3,8 @@ from rest_framework.views import APIView
 from django.http import JsonResponse
 import json
 import logging
+from rest_framework.permissions import IsAuthenticated
+from .backends import AccessTokenAuthBackend
 
 from {{app_name}}.models import {{tableName}}
 from {{app_name}}.serializers import {{tableName}}Serializer
@@ -14,6 +16,8 @@ audit_logger = logging.getLogger("audit")
 
 
 class MasterAPIView(APIView):
+    authentication_classes = [AccessTokenAuthBackend]
+    permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         agreements = {{tableName}}.objects.all()
         serialized_data = {{tableName}}Serializer(agreements, many=True).data

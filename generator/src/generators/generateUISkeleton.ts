@@ -142,11 +142,11 @@ export function generateDashboardOnly(
     path.join(configTarget, "authConfig.js")
   );
 
-  // masterAPI
-//   fs.copyFileSync(
-//     path.join(templatesRoot, "api", "masterAPI.js"),
-//     path.join(apiTarget, "masterAPI.js")
-//   );
+  // dashboardAPI
+  fs.copyFileSync(
+    path.join(templatesRoot, "api", "dashboardAPI.js"),
+    path.join(apiTarget, "dashboardAPI.js")
+  );
 
   console.log(`✅ Dashboard-only UI generated for: ${projectName}`);
   return projectRoot;

@@ -53,7 +53,7 @@ function toDjangoProjectName(name) {
  * @param {string} projectName - Django project name
  * @returns {{ folders: string[] }}
  */
-function bootstrapDjangoProject(outputFolder, projectName, djangoProjectName ) {
+function bootstrapDjangoProject(outputFolder, projectName, djangoProjectName,  setupVenv) {
   const folders = [];
   const pythonCmd = detectPython();
   
@@ -79,39 +79,85 @@ function bootstrapDjangoProject(outputFolder, projectName, djangoProjectName ) {
   const djangoAdmin = isWindows
     ? path.join(venvPath, "Scripts", "django-admin.exe")
     : path.join(venvPath, "bin", "django-admin");
-  // 3. Install Django and DRF (upgrade pip first)
-  console.log("📦 Upgrading pip...");
-  execSync(`"${venvPython}" -m pip install --upgrade pip`, {
-    stdio: "inherit",
-  });
-  // 4. Install Django and DRF
-  console.log("📦 Installing Django and djangorestframework...");
-  execSync(`"${venvPip}" install django djangorestframework django-cors-headers oracledb requests cryptography PyJWT sqlparse tzdata`, {
-    stdio: "inherit",
-  });
-
-  // 4. Create Django project (using sanitized name)
-  console.log(`📁 Creating Django project: ${djangoProjectName}`);
-  execSync(`"${djangoAdmin}" startproject ${djangoProjectName} .`, {
-    cwd: outputFolder,
-    stdio: "inherit",
-  });
-  folders.push(path.join(outputFolder, djangoProjectName));
-  // 5. Create each app
-  const appName = "core";
-  console.log(`📁 Creating Django app: ${appName}`);
-  execSync(`"${venvPython}" manage.py startapp ${appName}`, {
-    cwd: outputFolder,
-    stdio: "inherit",
-  });
-
-  // 6. Generate requirements.txt
-  console.log("📝 Generating requirements.txt...");
-  execSync(`"${venvPip}" freeze > requirements.txt`, {
-    cwd: outputFolder,
-    stdio: "inherit",
-    shell: true,
-  });
+    if (setupVenv !== false) {
+      // Full venv setup
+      if (fs.existsSync(venvPath)) {
+        console.log("🧹 Removing existing (possibly corrupted) venv...");
+        fs.rmSync(venvPath, { recursive: true, force: true });
+      }
+      console.log("🐍 Creating virtual environment...");
+      execSync(`${pythonCmd} -m venv "${venvPath}"`, { stdio: "inherit" });
+      folders.push(venvPath);
+  
+      console.log("📦 Upgrading pip...");
+      execSync(`"${venvPython}" -m pip install --upgrade pip`, { stdio: "inherit" });
+  
+      console.log("📦 Installing Django and dependencies...");
+      execSync(`"${venvPip}" install django djangorestframework django-cors-headers oracledb requests cryptography PyJWT sqlparse tzdata`, {
+        stdio: "inherit",
+      });
+  
+      // Create Django project
+      console.log(`📁 Creating Django project: ${djangoProjectName}`);
+      execSync(`"${djangoAdmin}" startproject ${djangoProjectName} .`, {
+        cwd: outputFolder,
+        stdio: "inherit",
+      });
+      folders.push(path.join(outputFolder, djangoProjectName));
+  
+      // Create app
+      const appName = "core";
+      console.log(`📁 Creating Django app: ${appName}`);
+      execSync(`"${venvPython}" manage.py startapp ${appName}`, {
+        cwd: outputFolder,
+        stdio: "inherit",
+      });
+  
+      // Generate requirements.txt from installed packages
+      console.log("📝 Generating requirements.txt...");
+      execSync(`"${venvPip}" freeze > requirements.txt`, {
+        cwd: outputFolder,
+        stdio: "inherit",
+        shell: true,
+      });
+    } else {
+      // Skip venv — just write requirements.txt and scaffold with system python
+      console.log("⏭️ Skipping venv setup (user opted out)");
+  
+      const requirements = [
+        "django",
+        "djangorestframework",
+        "django-cors-headers",
+        "oracledb",
+        "requests",
+        "cryptography",
+        "PyJWT",
+        "sqlparse",
+        "tzdata",
+      ].join("\n");
+      fs.writeFileSync(path.join(outputFolder, "requirements.txt"), requirements + "\n");
+      console.log("📝 Written requirements.txt");
+      
+       // Install only django via system pip (needed for startproject/startapp)
+       console.log("📦 Installing Django (required for scaffolding)...");
+       execSync(`${pythonCmd} -m pip install django`, { stdio: "inherit" });
+ 
+  
+      // Use system python/django-admin to scaffold
+      console.log(`📁 Creating Django project: ${djangoProjectName}`);
+      execSync(`${pythonCmd} -m django startproject ${djangoProjectName} .`, {
+        cwd: outputFolder,
+        stdio: "inherit",
+      });
+      folders.push(path.join(outputFolder, djangoProjectName));
+  
+      const appName = "core";
+      console.log(`📁 Creating Django app: ${appName}`);
+      execSync(`${pythonCmd} manage.py startapp ${appName}`, {
+        cwd: outputFolder,
+        stdio: "inherit",
+      });
+    }
 
   return { folders };
 }

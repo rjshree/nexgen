@@ -41,10 +41,9 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
     
-    "target": "ES2020",
-    "module": "CommonJS",
-    // "outDir": "dist",
-    // "rootDir": "src",
+    "target": "es2020",
+    "module": "commonjs",
+    
     "esModuleInterop": true,
     "strict": false
 

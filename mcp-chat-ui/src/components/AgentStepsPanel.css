@@ -1,0 +1,35 @@
+
+agent-panel {
+    width: 260px;
+    border-right: 1px solid #222;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .agent-step {
+    background: #111;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .agent-step .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #facc15;
+  }
+  
+  .agent-step.done .dot {
+    background: #22c55e;
+  }
+  
+  .agent-step.running .dot {
+    background: #facc15;
+  }
+  
